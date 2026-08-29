@@ -577,13 +577,13 @@
 
     <script>
         // ===== КОНФИГУРАЦИЯ ДЛЯ GITHUB =====
-        // ⚠️ ВНИМАНИЕ: Замените эти значения на свои!
+        // ⚠️ ВНИМАНИЕ: Замените 'ВАШ_ТОКЕН_ЗДЕСЬ' на ваш GitHub токен!
         const GITHUB_CONFIG = {
-            owner: 'kudu512-tech',          // Ваш логин на GitHub
-            repo: 'arpstroy',               // Имя репозитория
-            branch: 'main',                 // Ветка (main или gh-pages)
-            path: 'data.json',              // Путь к файлу с данными
-            token: ''                       // GitHub токен (заполните при первом запуске)
+            owner: 'kudu512-tech',
+            repo: 'arpstroy_navesss',
+            branch: 'main',
+            path: 'data.json',
+            token: 'ВАШ_ТОКЕН_ЗДЕСЬ'  // ВСТАВЬТЕ ВАШ ТОКЕН СЮДА
         };
 
         // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -601,7 +601,6 @@
         // ===== ЗАГРУЗКА ДАННЫХ С GITHUB =====
         async function loadDataFromGitHub() {
             const statusEl = document.getElementById('syncStatus');
-            // Показываем статус только для админа
             if (isAdmin) {
                 statusEl.classList.add('visible');
                 statusEl.textContent = '⏳ Загрузка...';
@@ -708,11 +707,11 @@
             const statusEl = document.getElementById('syncStatus');
             if (!isAdmin) return;
 
-            if (!GITHUB_CONFIG.token) {
+            if (!GITHUB_CONFIG.token || GITHUB_CONFIG.token === 'ВАШ_ТОКЕН_ЗДЕСЬ') {
                 saveToCache();
                 statusEl.textContent = '💾 Сохранено локально';
                 statusEl.className = 'sync-status success visible';
-                alert('⚠️ Токен GitHub не настроен. Данные сохранены в кэше браузера.\n\nЧтобы синхронизировать с GitHub, добавьте токен в GITHUB_CONFIG.token');
+                alert('⚠️ GitHub токен не настроен! Данные сохранены в кэше браузера.\n\nЧтобы синхронизировать с GitHub, откройте файл index.html и вставьте ваш токен в GITHUB_CONFIG.token');
                 return false;
             }
 
@@ -872,36 +871,30 @@
         const CLICKS_NEEDED = 5;
 
         function showAdminElements(show) {
-            // Кнопки добавления
             ['addReadyBtn', 'addVizBtn', 'addClientPhotosBtn', 'addVideoBtn'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.style.display = show ? 'inline-block' : 'none';
             });
-            // Кнопка настройки фильтров
             const filterBtn = document.getElementById('filterAdminBtn');
             if (filterBtn) {
                 if (show) filterBtn.classList.add('visible');
                 else filterBtn.classList.remove('visible');
             }
-            // Кнопка синхронизации
             const syncBtn = document.getElementById('syncBtn');
             if (syncBtn) {
                 if (show) syncBtn.classList.add('visible');
                 else syncBtn.classList.remove('visible');
             }
-            // Кнопка очистки кэша
             const cacheBtn = document.getElementById('cacheBtn');
             if (cacheBtn) {
                 if (show) cacheBtn.classList.add('visible');
                 else cacheBtn.classList.remove('visible');
             }
-            // Индикатор админа
             const indicator = document.getElementById('adminIndicator');
             if (indicator) {
                 if (show) indicator.classList.add('active');
                 else indicator.classList.remove('active');
             }
-            // Статус синхронизации показываем только админу
             const statusEl = document.getElementById('syncStatus');
             if (statusEl) {
                 if (show) statusEl.classList.add('visible');
@@ -926,7 +919,6 @@
                 isAdmin = true;
                 showAdminElements(true);
                 document.getElementById('passwordModal').style.display = 'none';
-                // Перезагружаем данные с отображением статуса
                 loadDataFromGitHub();
                 renderAll();
             } else {
@@ -1173,13 +1165,11 @@
         }
 
         // ===== ИНИЦИАЛИЗАЦИЯ =====
-        // Пытаемся загрузить из localStorage сразу для скорости
         const loaded = loadFromCache();
         if (loaded) {
             renderAll();
         }
 
-        // Загружаем свежие данные с GitHub (статус будет показан только админу)
         loadDataFromGitHub();
     </script>
 </body>
