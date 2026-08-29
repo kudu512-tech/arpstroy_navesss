@@ -577,13 +577,13 @@
 
     <script>
         // ===== КОНФИГУРАЦИЯ ДЛЯ GITHUB =====
-        // ⚠️ ВНИМАНИЕ: Замените 'ВАШ_ТОКЕН_ЗДЕСЬ' на ваш GitHub токен!
+        // ✅ НОВЫЙ ТОКЕН УЖЕ ВСТАВЛЕН!
         const GITHUB_CONFIG = {
             owner: 'kudu512-tech',
             repo: 'arpstroy_navesss',
             branch: 'main',
             path: 'data.json',
-            token: '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'  // ВСТАВЬТЕ ВАШ ТОКЕН СЮДА
+            token: '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'  // ✅ НОВЫЙ ТОКЕН
         };
 
         // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -707,7 +707,7 @@
             const statusEl = document.getElementById('syncStatus');
             if (!isAdmin) return;
 
-            if (!GITHUB_CONFIG.token || GITHUB_CONFIG.token === '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') {
+            if (!GITHUB_CONFIG.token || GITHUB_CONFIG.token === 'ВАШ_ТОКЕН_ЗДЕСЬ') {
                 saveToCache();
                 statusEl.textContent = '💾 Сохранено локально';
                 statusEl.className = 'sync-status success visible';
