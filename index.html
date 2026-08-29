@@ -354,6 +354,23 @@
         .admin-btn.danger { border-color: #dc3545; color: #dc3545; }
         .admin-btn.danger:hover { background: #dc3545; color: white; }
 
+        /* Стили для модалки ввода токена */
+        #tokenInput {
+            font-family: 'Courier New', monospace;
+            letter-spacing: 0.5px;
+            background: #f8f9fa;
+        }
+        .token-hint {
+            font-size: clamp(0.65rem, 0.75rem, 0.8rem);
+            color: var(--text-light);
+            padding: 8px 12px;
+            background: #fff3cd;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            border-left: 3px solid #ffc107;
+        }
+        .token-hint strong { color: #856404; }
+
         @media (max-width: 992px) {
             .ready-card { grid-template-columns: 1fr; }
             .ready-card .ready-photo { min-height: clamp(180px, 25vh, 250px); }
@@ -556,6 +573,26 @@
 
     <!-- МОДАЛКИ -->
     <div id="passwordModal" class="modal"><div class="modal-content"><span class="close" onclick="closePasswordModal()">&times;</span><h3>Вход</h3><input type="password" id="passwordInput" placeholder="Пароль"><button class="btn btn-filled" onclick="checkPassword()">Войти</button></div></div>
+
+    <!-- МОДАЛКА ДЛЯ ВВОДА ТОКЕНА (НОВАЯ!) -->
+    <div id="tokenModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeTokenModal()">&times;</span>
+            <h3>🔑 Введите GitHub токен</h3>
+            <div class="token-hint">
+                <strong>⚠️ Токен НЕ сохраняется в коде сайта!</strong><br>
+                Он будет использован только для текущей синхронизации и сохранится в вашем браузере.
+            </div>
+            <label>GitHub Personal Access Token</label>
+            <input type="password" id="tokenInput" placeholder="Вставьте токен сюда (начинается с ghp_)">
+            <div style="font-size: 0.7rem; color: var(--text-light); margin-bottom: 12px;">
+                Как получить токен: GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token → поставьте галочку <strong>repo</strong>
+            </div>
+            <button class="btn btn-filled" onclick="saveToken()">💾 Сохранить токен</button>
+            <button class="btn" style="background: #eee; color: #333; border-color: #ccc; margin-top: 8px;" onclick="closeTokenModal()">Отмена</button>
+        </div>
+    </div>
+
     <div id="addReadyModal" class="modal"><div class="modal-content"><span class="close" onclick="closeAddReadyModal()">&times;</span><h3>Готовый проект</h3><label>Название</label><input type="text" id="newReadyTitle"><label>Тип постройки</label><input type="text" id="newReadyType"><label>Площадь (м²)</label><input type="text" id="newReadyArea"><label>Материал</label><input type="text" id="newReadyMaterial"><label>Особенности</label><input type="text" id="newReadyTech"><label>Срок изготовления</label><input type="text" id="newReadyTime"><label>Цена (₽)</label><input type="text" id="newReadyPrice"><label>Фото (через запятую)</label><textarea id="newReadyImages" rows="3"></textarea><button class="btn btn-filled" onclick="addReadyProject()">Добавить</button></div></div>
     <div id="editReadyModal" class="modal"><div class="modal-content"><span class="close" onclick="closeEditReadyModal()">&times;</span><h3>Редактировать</h3><input type="hidden" id="editReadyIndex"><label>Название</label><input type="text" id="editReadyTitle"><label>Тип</label><input type="text" id="editReadyType"><label>Площадь</label><input type="text" id="editReadyArea"><label>Материал</label><input type="text" id="editReadyMaterial"><label>Особенности</label><input type="text" id="editReadyTech"><label>Срок</label><input type="text" id="editReadyTime"><label>Цена</label><input type="text" id="editReadyPrice"><label>Фото</label><textarea id="editReadyImages" rows="3"></textarea><button class="btn btn-filled" onclick="saveEditReady()">Сохранить</button></div></div>
     <div id="addVizModal" class="modal"><div class="modal-content"><span class="close" onclick="closeAddVizModal()">&times;</span><h3>Добавить визуализацию</h3><label>Ссылки на фото (через запятую)</label><textarea id="newVizImages" rows="4"></textarea><button class="btn btn-filled" onclick="addViz()">Добавить</button></div></div>
@@ -576,14 +613,14 @@
     </div>
 
     <script>
-        // ===== КОНФИГУРАЦИЯ ДЛЯ GITHUB =====
-        // ✅ НОВЫЙ ТОКЕН УЖЕ ВСТАВЛЕН!
+        // ===== КОНФИГУРАЦИЯ ДЛЯ GITHUB (БЕЗ ТОКЕНА!) =====
+        // ✅ Токен НЕ хранится в коде. Он вводится вручную через модальное окно
         const GITHUB_CONFIG = {
             owner: 'kudu512-tech',
             repo: 'arpstroy_navesss',
             branch: 'main',
             path: 'data.json',
-            token: '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'  // ✅ НОВЫЙ ТОКЕН
+            token: ''  // Пустая строка — токен вводится вручную!
         };
 
         // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -598,6 +635,47 @@
         let galleryImages = [], galleryIndex = 0;
         let dataLoaded = false;
 
+        // ===== ФУНКЦИИ ДЛЯ РАБОТЫ С ТОКЕНОМ =====
+        function getToken() {
+            // Сначала пробуем взять из localStorage (безопасное хранение в браузере)
+            let token = localStorage.getItem('github_token');
+            if (token) {
+                GITHUB_CONFIG.token = token;
+                return token;
+            }
+            return null;
+        }
+
+        function saveTokenToStorage(token) {
+            localStorage.setItem('github_token', token);
+            GITHUB_CONFIG.token = token;
+        }
+
+        function openTokenModal() {
+            document.getElementById('tokenModal').style.display = 'flex';
+            document.getElementById('tokenInput').value = '';
+            document.getElementById('tokenInput').focus();
+        }
+
+        function closeTokenModal() {
+            document.getElementById('tokenModal').style.display = 'none';
+        }
+
+        function saveToken() {
+            const token = document.getElementById('tokenInput').value.trim();
+            if (!token || !token.startsWith('ghp_')) {
+                alert('❌ Токен должен начинаться с "ghp_"!');
+                return;
+            }
+            saveTokenToStorage(token);
+            closeTokenModal();
+            const statusEl = document.getElementById('syncStatus');
+            statusEl.textContent = '✅ Токен сохранён в браузере';
+            statusEl.className = 'sync-status success visible';
+            // Загружаем данные заново с новым токеном
+            loadDataFromGitHub();
+        }
+
         // ===== ЗАГРУЗКА ДАННЫХ С GITHUB =====
         async function loadDataFromGitHub() {
             const statusEl = document.getElementById('syncStatus');
@@ -607,9 +685,52 @@
                 statusEl.className = 'sync-status loading visible';
             }
 
+            // Проверяем токен
+            const token = getToken();
+            if (!token) {
+                if (isAdmin) {
+                    statusEl.textContent = '🔑 Введите токен';
+                    statusEl.className = 'sync-status visible';
+                    // Показываем модалку для ввода токена
+                    setTimeout(() => openTokenModal(), 500);
+                }
+                // Пробуем загрузить из кэша
+                const loaded = loadFromCache();
+                if (loaded) {
+                    renderAll();
+                    return true;
+                }
+                setDefaultData();
+                renderAll();
+                return false;
+            }
+
             try {
                 const url = `https://raw.githubusercontent.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${GITHUB_CONFIG.path}`;
-                const response = await fetch(url);
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `token ${token}`
+                    }
+                });
+
+                if (response.status === 401) {
+                    // Токен недействителен
+                    localStorage.removeItem('github_token');
+                    GITHUB_CONFIG.token = '';
+                    if (isAdmin) {
+                        statusEl.textContent = '❌ Токен недействителен';
+                        statusEl.className = 'sync-status error visible';
+                        setTimeout(() => openTokenModal(), 500);
+                    }
+                    const loaded = loadFromCache();
+                    if (loaded) {
+                        renderAll();
+                        return true;
+                    }
+                    setDefaultData();
+                    renderAll();
+                    return false;
+                }
 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
@@ -705,13 +826,17 @@
         // ===== СОХРАНЕНИЕ ДАННЫХ НА GITHUB =====
         async function saveDataToGitHub() {
             const statusEl = document.getElementById('syncStatus');
-            if (!isAdmin) return;
+            if (!isAdmin) {
+                alert('Сначала войдите в админ-режим (5 кликов по логотипу)');
+                return;
+            }
 
-            if (!GITHUB_CONFIG.token || GITHUB_CONFIG.token === 'ВАШ_ТОКЕН_ЗДЕСЬ') {
-                saveToCache();
-                statusEl.textContent = '💾 Сохранено локально';
-                statusEl.className = 'sync-status success visible';
-                alert('⚠️ GitHub токен не настроен! Данные сохранены в кэше браузера.\n\nЧтобы синхронизировать с GitHub, откройте файл index.html и вставьте ваш токен в GITHUB_CONFIG.token');
+            // Проверяем токен
+            let token = getToken();
+            if (!token) {
+                statusEl.textContent = '🔑 Введите токен';
+                statusEl.className = 'sync-status visible';
+                openTokenModal();
                 return false;
             }
 
@@ -733,13 +858,21 @@
                 try {
                     const getResponse = await fetch(getUrl, {
                         headers: {
-                            'Authorization': `token ${GITHUB_CONFIG.token}`,
+                            'Authorization': `token ${token}`,
                             'Accept': 'application/vnd.github.v3+json'
                         }
                     });
                     if (getResponse.ok) {
                         const fileData = await getResponse.json();
                         sha = fileData.sha;
+                    } else if (getResponse.status === 401) {
+                        // Токен недействителен
+                        localStorage.removeItem('github_token');
+                        GITHUB_CONFIG.token = '';
+                        statusEl.textContent = '❌ Токен недействителен';
+                        statusEl.className = 'sync-status error visible';
+                        openTokenModal();
+                        return false;
                     }
                 } catch (e) {}
 
@@ -755,12 +888,21 @@
                 const putResponse = await fetch(putUrl, {
                     method: 'PUT',
                     headers: {
-                        'Authorization': `token ${GITHUB_CONFIG.token}`,
+                        'Authorization': `token ${token}`,
                         'Content-Type': 'application/json',
                         'Accept': 'application/vnd.github.v3+json'
                     },
                     body: JSON.stringify(putBody)
                 });
+
+                if (putResponse.status === 401) {
+                    localStorage.removeItem('github_token');
+                    GITHUB_CONFIG.token = '';
+                    statusEl.textContent = '❌ Токен недействителен';
+                    statusEl.className = 'sync-status error visible';
+                    openTokenModal();
+                    return false;
+                }
 
                 if (!putResponse.ok) {
                     const errorData = await putResponse.json();
@@ -791,8 +933,9 @@
             if (!confirm('Вы уверены, что хотите очистить весь кэш localStorage?\n\nЭто удалит все локально сохраненные данные. Данные на GitHub останутся нетронутыми.')) return;
 
             try {
-                const keys = ['arpstroy_ready', 'arpstroy_viz', 'arpstroy_client_photos', 'arpstroy_videos', 'arpstroy_filter_types', 'arpstroy_cache_date'];
+                const keys = ['arpstroy_ready', 'arpstroy_viz', 'arpstroy_client_photos', 'arpstroy_videos', 'arpstroy_filter_types', 'arpstroy_cache_date', 'github_token'];
                 keys.forEach(key => localStorage.removeItem(key));
+                GITHUB_CONFIG.token = '';
                 const statusEl = document.getElementById('syncStatus');
                 statusEl.textContent = '🗑️ Кэш очищен';
                 statusEl.className = 'sync-status visible';
@@ -1165,11 +1308,17 @@
         }
 
         // ===== ИНИЦИАЛИЗАЦИЯ =====
+        // Проверяем, есть ли сохранённый токен
+        if (localStorage.getItem('github_token')) {
+            GITHUB_CONFIG.token = localStorage.getItem('github_token');
+        }
+
         const loaded = loadFromCache();
         if (loaded) {
             renderAll();
         }
 
+        // Загружаем данные
         loadDataFromGitHub();
     </script>
 </body>
